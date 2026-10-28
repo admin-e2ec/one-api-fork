@@ -1,5 +1,5 @@
 # 基础镜像按多架构 index digest 固定；更新时需重新解析 digest
-FROM --platform=$BUILDPLATFORM node:16@sha256:f77a1aef2da8d83e45ec990f45df50f1a286c5fe8bbfb8c6e4246c6389705c0b AS builder
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS builder
 
 WORKDIR /web
 COPY ./VERSION .
