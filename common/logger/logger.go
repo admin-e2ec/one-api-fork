@@ -130,6 +130,10 @@ func logHelper(ctx context.Context, level loggerLevel, msg string) {
 		if rawRequestId != "" {
 			requestId = fmt.Sprintf(" | %s", rawRequestId)
 		}
+		// 调用方的 X-Request-Id（已校验）：与 One-API 的 id 放在一起，按任一个都能找到这一行
+		if clientRequestId := helper.GetClientRequestId(ctx); clientRequestId != "" {
+			requestId += fmt.Sprintf(" | client_request_id=%s", clientRequestId)
+		}
 	}
 	lineInfo, funcName := getLineInfo()
 	now := time.Now()

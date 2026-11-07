@@ -26,7 +26,8 @@ type Log struct {
 	CompletionTokens  int    `json:"completion_tokens" gorm:"default:0"`
 	ChannelId         int    `json:"channel" gorm:"index"`
 	RequestId         string `json:"request_id" gorm:"default:''"`
-	ElapsedTime       int64  `json:"elapsed_time" gorm:"default:0"` // unit is ms
+	ClientRequestId   string `json:"client_request_id" gorm:"default:''"` // 调用方的 X-Request-Id（已校验），没有时为空
+	ElapsedTime       int64  `json:"elapsed_time" gorm:"default:0"`       // unit is ms
 	IsStream          bool   `json:"is_stream" gorm:"default:false"`
 	SystemPromptReset bool   `json:"system_prompt_reset" gorm:"default:false"`
 }
@@ -41,14 +42,19 @@ const (
 )
 
 func recordLogHelper(ctx context.Context, log *Log) {
-	requestId := helper.GetRequestID(ctx)
-	log.RequestId = requestId
+	applyRequestIds(ctx, log)
 	err := LOG_DB.Create(log).Error
 	if err != nil {
 		logger.Error(ctx, "failed to record log: "+err.Error())
 		return
 	}
 	logger.Infof(ctx, "record log: %+v", log)
+}
+
+// applyRequestIds 把 One-API 的请求 id 和调用方的 X-Request-Id 写进日志行
+func applyRequestIds(ctx context.Context, log *Log) {
+	log.RequestId = helper.GetRequestID(ctx)
+	log.ClientRequestId = helper.GetClientRequestId(ctx)
 }
 
 func RecordLog(ctx context.Context, userId int, logType int, content string) {

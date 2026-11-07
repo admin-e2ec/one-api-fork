@@ -7,7 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/channeltype"
@@ -65,6 +67,10 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set(ctxkey.Channel, channel.Type)
 	c.Set(ctxkey.ChannelId, channel.Id)
 	c.Set(ctxkey.ChannelName, channel.Name)
+	// 重试换渠道时会再次调用这里；响应头在写出响应前都能覆盖，所以返回的是最后实际使用的渠道
+	if config.ExposeChannelIdHeader {
+		c.Header(helper.ChannelIdHeader, strconv.Itoa(channel.Id))
+	}
 	if channel.SystemPrompt != nil && *channel.SystemPrompt != "" {
 		c.Set(ctxkey.SystemPrompt, *channel.SystemPrompt)
 	}

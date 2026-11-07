@@ -415,6 +415,10 @@ graph LR
 28. `INITIAL_ROOT_ACCESS_TOKEN`：如果设置了该值，则在系统首次启动时会自动创建一个值为该环境变量的 root 用户创建系统管理令牌。
 29. `ENFORCE_INCLUDE_USAGE`：是否强制在 stream 模型下返回 usage，默认不开启，可选值为 `true` 和 `false`。
 30. `TEST_PROMPT`：测试模型时的用户 prompt，默认为 `Print your model name exactly and do not output without any other text.`。
+31. `RELAY_FORWARD_REQUEST_ID`（fork 新增）：转发给上游时带上请求 id，默认不开启，可选值为 `true` 和 `false`。开启后上游请求带 `X-Request-Id`（调用方的 `X-Request-Id`，没有时用 One-API 的 id）、`X-Oneapi-Request-Id` 和 `X-Litellm-Spend-Logs-Metadata`（LiteLLM 把其中的 `oneapi_request_id`、`client_request_id` 写进 spend log）。
+32. `EXPOSE_CHANNEL_ID_HEADER`（fork 新增）：响应头 `X-Oneapi-Channel-Id` 返回本次请求最后实际使用的渠道 id，默认不开启，可选值为 `true` 和 `false`。
+
+调用方的请求 id（fork 新增，无需配置）：请求头 `X-Request-Id` 为 1–128 个字符且只含字母、数字和 `. _ : -` 时，One-API 把它记进访问日志、程序日志（`client_request_id=<id>`）和用量日志表 `logs.client_request_id`；不合格时当作没有传。One-API 自己的请求 id 仍由响应头 `X-Oneapi-Request-Id` 返回，记在 `logs.request_id`。
 
 ### 命令行参数
 1. `--port <port_number>`: 指定服务器监听的端口号，默认为 `3000`。
