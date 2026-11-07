@@ -163,4 +163,11 @@ var UserContentRequestProxy = env.String("USER_CONTENT_REQUEST_PROXY", "")
 var UserContentRequestTimeout = env.Int("USER_CONTENT_REQUEST_TIMEOUT", 30)
 
 var EnforceIncludeUsage = env.Bool("ENFORCE_INCLUDE_USAGE", false)
+
+// RelayForwardRequestId 为 true 时，转发给上游的请求带上 X-Request-Id（调用方的 id，没有时用 One-API 的 id）、
+// X-Oneapi-Request-Id 和 X-Litellm-Spend-Logs-Metadata（LiteLLM 把它写进 spend log），便于跨网关关联
+var RelayForwardRequestId = env.Bool("RELAY_FORWARD_REQUEST_ID", false)
+
+// ExposeChannelIdHeader 为 true 时，响应头 X-Oneapi-Channel-Id 返回本次请求最后选中的渠道 id
+var ExposeChannelIdHeader = env.Bool("EXPOSE_CHANNEL_ID_HEADER", false)
 var TestPrompt = env.String("TEST_PROMPT", "Output only your specific model name with no additional text.")
