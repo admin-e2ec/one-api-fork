@@ -1,5 +1,7 @@
 package anthropic
 
+import "github.com/songquanpeng/one-api/relay/model"
+
 // https://docs.anthropic.com/claude/reference/messages_post
 
 type Metadata struct {
@@ -22,6 +24,8 @@ type Content struct {
 	Input     any    `json:"input,omitempty"`
 	Content   string `json:"content,omitempty"`
 	ToolUseId string `json:"tool_use_id,omitempty"`
+	// prompt caching breakpoint
+	CacheControl *model.CacheControl `json:"cache_control,omitempty"`
 }
 
 type Message struct {
@@ -42,23 +46,27 @@ type InputSchema struct {
 }
 
 type Request struct {
-	Model         string    `json:"model"`
-	Messages      []Message `json:"messages"`
-	System        string    `json:"system,omitempty"`
-	MaxTokens     int       `json:"max_tokens,omitempty"`
-	StopSequences []string  `json:"stop_sequences,omitempty"`
-	Stream        bool      `json:"stream,omitempty"`
-	Temperature   *float64  `json:"temperature,omitempty"`
-	TopP          *float64  `json:"top_p,omitempty"`
-	TopK          int       `json:"top_k,omitempty"`
-	Tools         []Tool    `json:"tools,omitempty"`
-	ToolChoice    any       `json:"tool_choice,omitempty"`
+	Model    string    `json:"model"`
+	Messages []Message `json:"messages"`
+	// System is either a string or, when any system part carries a cache_control
+	// marker, a []Content of text blocks. It is nil when there is no system prompt.
+	System        any      `json:"system,omitempty"`
+	MaxTokens     int      `json:"max_tokens,omitempty"`
+	StopSequences []string `json:"stop_sequences,omitempty"`
+	Stream        bool     `json:"stream,omitempty"`
+	Temperature   *float64 `json:"temperature,omitempty"`
+	TopP          *float64 `json:"top_p,omitempty"`
+	TopK          int      `json:"top_k,omitempty"`
+	Tools         []Tool   `json:"tools,omitempty"`
+	ToolChoice    any      `json:"tool_choice,omitempty"`
 	//Metadata    `json:"metadata,omitempty"`
 }
 
 type Usage struct {
-	InputTokens  int `json:"input_tokens"`
-	OutputTokens int `json:"output_tokens"`
+	InputTokens              int `json:"input_tokens"`
+	OutputTokens             int `json:"output_tokens"`
+	CacheCreationInputTokens int `json:"cache_creation_input_tokens,omitempty"`
+	CacheReadInputTokens     int `json:"cache_read_input_tokens,omitempty"`
 }
 
 type Error struct {

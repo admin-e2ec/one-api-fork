@@ -89,8 +89,8 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 		claudeRequest.Model = "claude-2.1"
 	}
 	for _, message := range textRequest.Messages {
-		if message.Role == "system" && claudeRequest.System == "" {
-			claudeRequest.System = message.StringContent()
+		if message.Role == "system" && claudeRequest.System == nil {
+			claudeRequest.System = convertSystem(message)
 			continue
 		}
 		claudeMessage := Message{
@@ -118,6 +118,7 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 					Input: inputParam,
 				})
 			}
+			claudeMessage.Content = withLastBlockCacheControl(claudeMessage.Content, message.CacheControl)
 			claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 			continue
 		}
@@ -137,9 +138,10 @@ func ConvertRequest(textRequest model.GeneralOpenAIRequest) *Request {
 				content.Source.MediaType = mimeType
 				content.Source.Data = data
 			}
+			content.CacheControl = copyCacheControl(part.CacheControl)
 			contents = append(contents, content)
 		}
-		claudeMessage.Content = contents
+		claudeMessage.Content = withLastBlockCacheControl(contents, message.CacheControl)
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
 	return &claudeRequest
@@ -265,6 +267,8 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 	common.SetEventStreamHeaders(c)
 
 	var usage model.Usage
+	// Cache counters are cumulative and may be repeated in message_delta, so keep the largest value.
+	var cacheRead, cacheCreation int
 	var modelName string
 	var id string
 	var lastToolCallChoice openai.ChatCompletionsStreamResponseChoice
@@ -288,6 +292,8 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		if meta != nil {
 			usage.PromptTokens += meta.Usage.InputTokens
 			usage.CompletionTokens += meta.Usage.OutputTokens
+			cacheRead = max(cacheRead, meta.Usage.CacheReadInputTokens)
+			cacheCreation = max(cacheCreation, meta.Usage.CacheCreationInputTokens)
 			if len(meta.Id) > 0 { // only message_start has an id, otherwise it's a finish_reason event.
 				modelName = meta.Model
 				id = fmt.Sprintf("chatcmpl-%s", meta.Id)
@@ -328,6 +334,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 
 	render.Done(c)
 
+	usage = withCacheUsage(usage, cacheRead, cacheCreation)
 	err := resp.Body.Close()
 	if err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
@@ -362,11 +369,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	}
 	fullTextResponse := ResponseClaude2OpenAI(&claudeResponse)
 	fullTextResponse.Model = modelName
-	usage := model.Usage{
-		PromptTokens:     claudeResponse.Usage.InputTokens,
-		CompletionTokens: claudeResponse.Usage.OutputTokens,
-		TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
-	}
+	usage := ConvertUsage(claudeResponse.Usage)
 	fullTextResponse.Usage = usage
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {
