@@ -7,6 +7,29 @@ type Message struct {
 	Name             *string `json:"name,omitempty"`
 	ToolCalls        []Tool  `json:"tool_calls,omitempty"`
 	ToolCallId       string  `json:"tool_call_id,omitempty"`
+	// CacheControl is a message-level prompt caching marker (used by Anthropic-compatible channels).
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
+}
+
+// CacheControl is a prompt caching marker, e.g. {"type":"ephemeral","ttl":"1h"}.
+type CacheControl struct {
+	Type string `json:"type"`
+	TTL  string `json:"ttl,omitempty"`
+}
+
+// parseCacheControl reads a cache_control value decoded into a generic map.
+// It returns nil when the value is missing or has no type.
+func parseCacheControl(v any) *CacheControl {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil
+	}
+	typ, _ := m["type"].(string)
+	if typ == "" {
+		return nil
+	}
+	ttl, _ := m["ttl"].(string)
+	return &CacheControl{Type: typ, TTL: ttl}
 }
 
 func (m Message) IsStringContent() bool {
@@ -59,8 +82,9 @@ func (m Message) ParseContent() []MessageContent {
 			case ContentTypeText:
 				if subStr, ok := contentMap["text"].(string); ok {
 					contentList = append(contentList, MessageContent{
-						Type: ContentTypeText,
-						Text: subStr,
+						Type:         ContentTypeText,
+						Text:         subStr,
+						CacheControl: parseCacheControl(contentMap["cache_control"]),
 					})
 				}
 			case ContentTypeImageURL:
@@ -70,6 +94,7 @@ func (m Message) ParseContent() []MessageContent {
 						ImageURL: &ImageURL{
 							Url: subObj["url"].(string),
 						},
+						CacheControl: parseCacheControl(contentMap["cache_control"]),
 					})
 				}
 			}
@@ -88,4 +113,6 @@ type MessageContent struct {
 	Type     string    `json:"type,omitempty"`
 	Text     string    `json:"text"`
 	ImageURL *ImageURL `json:"image_url,omitempty"`
+	// CacheControl is a part-level prompt caching marker.
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }

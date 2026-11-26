@@ -6,6 +6,16 @@ type Usage struct {
 	TotalTokens      int `json:"total_tokens"`
 
 	CompletionTokensDetails *CompletionTokensDetails `json:"completion_tokens_details,omitempty"`
+	PromptTokensDetails     *PromptTokensDetails     `json:"prompt_tokens_details,omitempty"`
+
+	// Prompt caching counters reported by upstreams such as Anthropic.
+	// PromptTokens already includes both of them.
+	CacheReadInputTokens     int `json:"cache_read_input_tokens,omitempty"`
+	CacheCreationInputTokens int `json:"cache_creation_input_tokens,omitempty"`
+}
+
+type PromptTokensDetails struct {
+	CachedTokens int `json:"cached_tokens"`
 }
 
 type CompletionTokensDetails struct {
